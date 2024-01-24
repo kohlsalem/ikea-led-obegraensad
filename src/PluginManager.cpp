@@ -113,16 +113,6 @@ int lastModeButtonState = 1;
 
 void PluginManager::runActivePlugin()
 {
-    if (currentStatus != LOADING)
-    {
-        modeButtonState = digitalRead(PIN_BUTTON);
-        if (modeButtonState != lastModeButtonState && modeButtonState == HIGH)
-        {
-            pluginManager.activateNextPlugin();
-        }
-        lastModeButtonState = modeButtonState;
-        currentStatus = NONE;
-    }
     if (activePlugin)
     {
         if (currentStatus != UPDATE && currentStatus != LOADING && currentStatus != WSBINARY)

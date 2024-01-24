@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SPI.h>
+#include <OneButton.h>
 
 #ifdef ESP32
 #include <WiFiManager.h>
@@ -52,6 +53,19 @@ WiFiManager wifiManager;
 unsigned long lastConnectionAttempt = 0;
 const unsigned long connectionInterval = 10000;
 
+/**
+ * Initialize a new OneButton instance for a button
+ * connected to digital pin 4 and GND, which is active low
+ * and uses the internal pull-up resistor.
+ */
+
+OneButton btn = OneButton(
+  PIN_BUTTON,  // Input pin for the button
+  true,        // Button is active LOW
+  true         // Enable internal pull-up resistor
+);
+
+
 #ifdef ESP32
 void connectToWiFi()
 {
@@ -83,6 +97,18 @@ void connectToWiFi()
   }
 
   lastConnectionAttempt = millis();
+
+  // Attach Action to button longpress to start config portal
+  btn.attachLongPressStop([](){
+    // if a long press is more then 5 seconds
+    if(btn.getPressedMs()>5000){
+      Screen.scrollText("Starting Configuration Portal");
+      server.end(); // stop actual webserver
+      wifiManager.startConfigPortal(); // trigger config portal
+      server.begin(); // restart actual webserver
+      Screen.scrollText("Config Finished");
+    }
+  });
 }
 #endif
 
@@ -185,11 +211,21 @@ void setup()
 #endif
 
   pluginManager.init();
+
+  // Attach method to switch plugin at button click
+  btn.attachClick([](){
+    if (currentStatus != LOADING)
+    {
+      pluginManager.activateNextPlugin();
+      currentStatus = NONE;
+    }
+  });
 }
 
 void loop()
 {
 
+  btn.tick();
   Messages.scrollMessageEveryMinute();
 
   pluginManager.runActivePlugin();
