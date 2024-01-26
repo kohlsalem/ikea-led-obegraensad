@@ -1,11 +1,7 @@
 #include "ConfigManager.h"
-#include <FS.h>
-#ifdef ESP32
-  #include <SPIFFS.h>
-#endif
-ConfigManager_::ConfigManager_(const char *filename) {
-    this->filename = filename;
-}
+
+
+
 
 void ConfigManager_::loadConfig() {
     File configFile = SPIFFS.open(filename, "r");
@@ -14,7 +10,11 @@ void ConfigManager_::loadConfig() {
         configFile.close();
     }
 }
-
+ //callback notifying us of the need to save config
+void ConfigManager_::saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
 void ConfigManager_::saveConfig() {
     File configFile = SPIFFS.open(filename, "w");
     if (configFile) {
@@ -47,18 +47,68 @@ void ConfigManager_::setEndTime(const char *endtime) {
     config["endtime"] = endtime;
 }
 
-void ConfigManager_::addParameter(WiFiManagerParameter &parameter) {
-    wifiManager.addParameter(&parameter);
+
+ void ConfigManager_::longPressReleaseCalllback(){
+    // if a long press is more then 5 seconds
+    if(btn.getPressedMs()>5000){
+      Screen.scrollText("Starting Configuration Portal");
+      server.end(); // stop actual webserver
+      wifiManager.startConfigPortal(WIFI_MANAGER_SSID); // trigger config portal
+      Screen.scrollText("Config Finished");
+      ESP.restart();
+    }
+ }
+
+ void ConfigManager_::connectToWiFi()
+{
+
+  // if a WiFi setup AP was started, reboot is required to clear routes
+  bool wifiWebServerStarted = false;
+  wifiManager.setWebServerCallback(
+      [&wifiWebServerStarted]()
+      { wifiWebServerStarted = true; });
+
+  wifiManager.setHostname(WIFI_HOSTNAME);
+  
+  //set config save notify callback
+  wifiManager.setSaveConfigCallback([](){ConfigManager.saveConfigCallback();});
+
+  // InputParameter fot Timezone
+  WiFiManagerParameter customTimeZone("pTimeZone","Time Zone","CET-1CEST,M3.5.0,M10.5.0/3",39);
+  wifiManager.addParameter(&customTimeZone);
+
+  wifiManager.setDarkMode(true); //idk, dark mot fits just better to that black display
+
+  wifiManager.autoConnect(WIFI_MANAGER_SSID);
+
+  if (MDNS.begin(WIFI_HOSTNAME))
+  {
+    MDNS.addService("http", "tcp", 80);
+    MDNS.setInstanceName(WIFI_HOSTNAME);
+  }
+  else
+  {
+    Serial.println("Could not start mDNS!");
+  }
+
+  if (wifiWebServerStarted)
+  {
+    // Reboot required, otherwise wifiManager server interferes with our server
+    Serial.println("Done running WiFi Manager webserver - rebooting");
+    ESP.restart();
+  }
+
+  lastConnectionAttempt = millis();
+
+  // Attach Action to button longpress to start config portal
+  btn.attachLongPressStop([](){ConfigManager.longPressReleaseCalllback();});
+
 }
 
-String ConfigManager_::getWiFiManagerResult() {
-    String result;
-    result.reserve(256);  // Adjust the size based on your needs
-    result += "WiFi SSID: " + WiFi.SSID() + "\n";
-    result += "WiFi Password: " + WiFi.psk() + "\n";
-    result += "IP Address: " + WiFi.localIP().toString() + "\n";
-    // Add more information as needed
-    return result;
+ConfigManager_ &ConfigManager_::getInstance()
+{
+  static ConfigManager_ instance;
+  return instance;
 }
 
-ConfigManager_ configManager("/config.json");
+ConfigManager_ &ConfigManager = ConfigManager_::getInstance();

@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <SPI.h>
-#include <OneButton.h>
+
 
 #ifdef ESP32
 #include <WiFiManager.h>
@@ -48,14 +48,10 @@ unsigned long interval = 30000;
 PluginManager pluginManager;
 SYSTEM_STATUS currentStatus = NONE;
 
-#ifdef ESP32
-WiFiManager wifiManager;
-//flag for saving data for custom wifimanager parameters
-bool shouldSaveConfig = false;
-#endif
-
+#ifndef esp32
 unsigned long lastConnectionAttempt = 0;
 const unsigned long connectionInterval = 10000;
+#endif
 
 /**
  * Initialize a new OneButton instance for a button
@@ -69,74 +65,6 @@ OneButton btn = OneButton(
   true         // Enable internal pull-up resistor
 );
 
-
-#ifdef ESP32
-char timeZone[40]; // Zeitzone als Zeichenkette speichern
-
- //callback notifying us of the need to save config
-void saveConfigCallback () {
-  Serial.println("Should save config");
-  shouldSaveConfig = true;
-}
-
-void connectToWiFi()
-{
-
-  // if a WiFi setup AP was started, reboot is required to clear routes
-  bool wifiWebServerStarted = false;
-  wifiManager.setWebServerCallback(
-      [&wifiWebServerStarted]()
-      { wifiWebServerStarted = true; });
-
-  wifiManager.setHostname(WIFI_HOSTNAME);
-  
-  //set config save notify callback
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-
-  // InputParameter fot Timezone
-  WiFiManagerParameter customTimeZone("pTimeZone","Time Zone","CET-1CEST,M3.5.0,M10.5.0/3",39);
-  wifiManager.addParameter(&customTimeZone);
-
-
-
-  wifiManager.autoConnect(WIFI_MANAGER_SSID);
-
-  if (MDNS.begin(WIFI_HOSTNAME))
-  {
-    MDNS.addService("http", "tcp", 80);
-    MDNS.setInstanceName(WIFI_HOSTNAME);
-  }
-  else
-  {
-    Serial.println("Could not start mDNS!");
-  }
-
-  if (wifiWebServerStarted)
-  {
-    // Reboot required, otherwise wifiManager server interferes with our server
-    Serial.println("Done running WiFi Manager webserver - rebooting");
-    ESP.restart();
-  }
-
-  lastConnectionAttempt = millis();
-
-  // Attach Action to button longpress to start config portal
-  btn.attachLongPressStop([](){
-    // if a long press is more then 5 seconds
-    if(btn.getPressedMs()>5000){
-      WiFiManagerParameter customTimeZone("TimeZone", "Enter Timezone according to the list: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.json", timeZone, 40);
-
-      wifiManager.addParameter(&customTimeZone);
-
-      Screen.scrollText("Starting Configuration Portal");
-      server.end(); // stop actual webserver
-      wifiManager.startConfigPortal(WIFI_HOSTNAME); // trigger config portal
-      Screen.scrollText("Config Finished");
-      ESP.restart();
-    }
-  });
-}
-#endif
 
 #ifdef ESP8266
 void connectToWiFi()
@@ -205,7 +133,7 @@ void setup()
 
 // server
 #ifdef ENABLE_SERVER
-  connectToWiFi();
+  ConfigManager.connectToWiFi();
 
   // set time server
   configTzTime(TZ_INFO, NTP_SERVER);
@@ -259,7 +187,11 @@ void loop()
   if (WiFi.status() != WL_CONNECTED && millis() - lastConnectionAttempt > connectionInterval)
   {
     Serial.println("Lost connection to Wi-Fi. Reconnecting...");
+#ifdef ESP32
+    ConfigManager.connectToWiFi();
+#else
     connectToWiFi();
+#endif
   }
 
 #ifdef ENABLE_SERVER

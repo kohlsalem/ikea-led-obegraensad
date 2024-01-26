@@ -61,3 +61,5 @@ enum SYSTEM_STATUS
 };
 
 extern SYSTEM_STATUS currentStatus;
+#include <OneButton.h>
+extern OneButton btn; 
