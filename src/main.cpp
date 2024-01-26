@@ -4,6 +4,7 @@
 
 #ifdef ESP32
 #include <WiFiManager.h>
+#include "ConfigManager.h"
 #endif
 #ifdef ESP32
 #include <ESPmDNS.h>
@@ -46,8 +47,11 @@ unsigned long interval = 30000;
 
 PluginManager pluginManager;
 SYSTEM_STATUS currentStatus = NONE;
+
 #ifdef ESP32
 WiFiManager wifiManager;
+//flag for saving data for custom wifimanager parameters
+bool shouldSaveConfig = false;
 #endif
 
 unsigned long lastConnectionAttempt = 0;
@@ -67,6 +71,14 @@ OneButton btn = OneButton(
 
 
 #ifdef ESP32
+char timeZone[40]; // Zeitzone als Zeichenkette speichern
+
+ //callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
+
 void connectToWiFi()
 {
 
@@ -77,6 +89,16 @@ void connectToWiFi()
       { wifiWebServerStarted = true; });
 
   wifiManager.setHostname(WIFI_HOSTNAME);
+  
+  //set config save notify callback
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+  // InputParameter fot Timezone
+  WiFiManagerParameter customTimeZone("pTimeZone","Time Zone","CET-1CEST,M3.5.0,M10.5.0/3",39);
+  wifiManager.addParameter(&customTimeZone);
+
+
+
   wifiManager.autoConnect(WIFI_MANAGER_SSID);
 
   if (MDNS.begin(WIFI_HOSTNAME))
@@ -102,11 +124,15 @@ void connectToWiFi()
   btn.attachLongPressStop([](){
     // if a long press is more then 5 seconds
     if(btn.getPressedMs()>5000){
+      WiFiManagerParameter customTimeZone("TimeZone", "Enter Timezone according to the list: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.json", timeZone, 40);
+
+      wifiManager.addParameter(&customTimeZone);
+
       Screen.scrollText("Starting Configuration Portal");
       server.end(); // stop actual webserver
-      wifiManager.startConfigPortal(); // trigger config portal
-      server.begin(); // restart actual webserver
+      wifiManager.startConfigPortal(WIFI_HOSTNAME); // trigger config portal
       Screen.scrollText("Config Finished");
+      ESP.restart();
     }
   });
 }
