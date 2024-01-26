@@ -46,14 +46,29 @@ const char *ConfigManager_::getEndTime() {
 void ConfigManager_::setEndTime(const char *endtime) {
     config["endtime"] = endtime;
 }
-
+char mqtt_server[40];
+char mqtt_port[6] = "8080";
+char api_token[34] = "YOUR_APITOKEN";
 
  void ConfigManager_::longPressReleaseCalllback(){
     // if a long press is more then 5 seconds
     if(btn.getPressedMs()>5000){
       Screen.scrollText("Starting Configuration Portal");
       server.end(); // stop actual webserver
-      wifiManager.startConfigPortal(WIFI_MANAGER_SSID); // trigger config portal
+
+      WiFiManager wm;
+  WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
+  WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 5);
+  WiFiManagerParameter custom_api_token("apikey", "API token", api_token, 34);
+  //add all your parameters here
+  wm.addParameter(&custom_mqtt_server);
+  wm.addParameter(&custom_mqtt_port);
+  wm.addParameter(&custom_api_token);
+
+      wm.startConfigPortal(WIFI_MANAGER_SSID); // trigger config portal
+      
+      
+      
       Screen.scrollText("Config Finished");
       ESP.restart();
     }
@@ -69,13 +84,23 @@ void ConfigManager_::setEndTime(const char *endtime) {
       { wifiWebServerStarted = true; });
 
   wifiManager.setHostname(WIFI_HOSTNAME);
-  
+/*  
   //set config save notify callback
   wifiManager.setSaveConfigCallback([](){ConfigManager.saveConfigCallback();});
 
-  // InputParameter fot Timezone
+  // InputParameter for Timezone
   WiFiManagerParameter customTimeZone("pTimeZone","Time Zone","CET-1CEST,M3.5.0,M10.5.0/3",39);
   wifiManager.addParameter(&customTimeZone);
+*/
+ // id/name, placeholder/prompt, default, length
+  WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
+  WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 5);
+  WiFiManagerParameter custom_api_token("apikey", "API token", api_token, 34);
+  //add all your parameters here
+  wifiManager.addParameter(&custom_mqtt_server);
+  wifiManager.addParameter(&custom_mqtt_port);
+  wifiManager.addParameter(&custom_api_token);
+
 
   wifiManager.setDarkMode(true); //idk, dark mot fits just better to that black display
 
