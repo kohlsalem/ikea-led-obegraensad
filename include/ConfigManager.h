@@ -8,21 +8,30 @@
 #include "secrets.h"
 #include <FS.h>
 
-#include <SPIFFS.h>
+//#include <SPIFFS.h>
+#include <LittleFS.h>
+
 #include <ESPmDNS.h>
 #include "screen.h"
 #include "asyncwebserver.h"
 
 class ConfigManager_ {
 private:
+   //String Buffers for additional parameters
+    char nightstartbuf[6] = "22:30";
+    char nightendbuf[6] = "6:30";
+    char timezonebuf[41] = TZ_INFO;
+
+
     const char *filename="settings.cfg";
     StaticJsonDocument<200> config;
-    WiFiManager wifiManager;
+
     //flag for saving data for custom wifimanager parameters
     bool shouldSaveConfig = false;
     char timeZone[40]; // Zeitzone als Zeichenkette speichern
     unsigned long lastConnectionAttempt = 0;
     const unsigned long connectionInterval = 10000;
+    void setupWifiManagerConfiguration(WiFiManager &wifiManager);
 public:
     static ConfigManager_ &getInstance();
 
@@ -39,7 +48,7 @@ public:
     void setEndTime(const char *endtime);
 
     void saveConfigCallback () ;
-    void longPressReleaseCalllback();
+    void startConfigPortal();
     void connectToWiFi();
 };
 extern ConfigManager_ &ConfigManager;

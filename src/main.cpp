@@ -174,8 +174,23 @@ void setup()
       currentStatus = NONE;
     }
   });
-}
+  // Attach method to reenable config manager
+  btn.attachLongPressStop([](){
 
+  });
+
+#ifdef ESP32
+    // Attach Action to button longpress to start config portal
+  btn.attachLongPressStop([]()
+  { 
+      // if a long press is more then 5 seconds
+    if (btn.getPressedMs() > 5000)
+    {
+      ConfigManager.startConfigPortal();
+    }
+  });
+#endif
+}
 void loop()
 {
 
