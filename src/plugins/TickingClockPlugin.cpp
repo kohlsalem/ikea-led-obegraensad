@@ -11,12 +11,14 @@ void TickingClockPlugin::loop()
   if (getLocalTime(&timeinfo))
   {
 
+/* 
     if ((timeinfo.tm_hour * 60 + timeinfo.tm_min) < 6 * 60 + 30 ||
         (timeinfo.tm_hour * 60 + timeinfo.tm_min) > 22 * 60 + 30) // only between 6:30 and 22:30
     {
       Screen.clear();
       return;
     }
+*/
 
     if (previousHour != timeinfo.tm_hour || previousMinutes != timeinfo.tm_min)
     {

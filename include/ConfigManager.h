@@ -21,6 +21,8 @@ private:
     char nightstartbuf[6] = "22:30";
     char nightendbuf[6] = "6:30";
     char timezonebuf[41] = TZ_INFO;
+    int nightstart;
+    int nightend;
 
 
     const char *filename="settings.cfg";
@@ -32,6 +34,8 @@ private:
     unsigned long lastConnectionAttempt = 0;
     const unsigned long connectionInterval = 10000;
     void setupWifiManagerConfiguration(WiFiManager &wifiManager);
+    ConfigManager_();
+    int convertToMinutes(const char* timeStr);
 public:
     static ConfigManager_ &getInstance();
 
@@ -39,13 +43,9 @@ public:
     void saveConfig();
 
     const char *getTimezone();
-    void setTimezone(const char *timezone);
 
-    const char *getStartTime();
-    void setStartTime(const char *starttime);
-
-    const char *getEndTime();
-    void setEndTime(const char *endtime);
+    int getNightStart();
+    int getNightEnd();
 
     void saveConfigCallback () ;
     void startConfigPortal();

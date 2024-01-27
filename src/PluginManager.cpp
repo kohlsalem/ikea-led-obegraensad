@@ -1,5 +1,6 @@
 #include "PluginManager.h"
 
+
 Plugin::Plugin() : id(-1) {}
 
 void Plugin::setId(int id)

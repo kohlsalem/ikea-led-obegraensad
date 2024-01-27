@@ -1,5 +1,12 @@
 #include "ConfigManager.h"
 
+ConfigManager_::ConfigManager_(){
+  // Initialize LittleFS
+  if (!LittleFS.begin()) {
+    Serial.println("Error mounting LittleFS");
+    return;
+  }
+}
 
 void ConfigManager_::loadConfig() {
   // Open the configuration file in read mode
@@ -45,6 +52,9 @@ void ConfigManager_::loadConfig() {
     nightstartbuf[sizeof(nightstartbuf) - 1] = '\0';
     nightendbuf[sizeof(nightendbuf) - 1] = '\0';
     timezonebuf[sizeof(timezonebuf) - 1] = '\0';
+
+    nightstart = convertToMinutes(nightstartbuf);
+    nightend = convertToMinutes(nightendbuf);
   }
 }
 
@@ -158,6 +168,16 @@ void ConfigManager_::saveConfig() {
   }
 }*/
 
+int ConfigManager_::convertToMinutes(const char* timeStr) {
+    int hours, minutes;
+    if (std::sscanf(timeStr, "%d:%d", &hours, &minutes) != 2 || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        // Invalid time format
+        return -1;
+    }
+
+    return hours * 60 + minutes;
+}
+
 // callback notifying us of the need to save config
 void ConfigManager_::saveConfigCallback()
 {
@@ -167,33 +187,21 @@ void ConfigManager_::saveConfigCallback()
 
 const char *ConfigManager_::getTimezone()
 {
-  return config["timezone"] | "Default_Timezone";
+  return timezonebuf;
 }
 
-void ConfigManager_::setTimezone(const char *timezone)
+ int ConfigManager_::getNightEnd()
 {
-  config["timezone"] = timezone;
+  return nightend;
 }
 
-const char *ConfigManager_::getStartTime()
+
+
+ int ConfigManager_::getNightStart()
 {
-  return config["starttime"] | "Default_Starttime";
+  return nightstart;
 }
 
-void ConfigManager_::setStartTime(const char *starttime)
-{
-  config["starttime"] = starttime;
-}
-
-const char *ConfigManager_::getEndTime()
-{
-  return config["endtime"] | "Default_Endtime";
-}
-
-void ConfigManager_::setEndTime(const char *endtime)
-{
-  config["endtime"] = endtime;
-}
 
 void ConfigManager_::setupWifiManagerConfiguration(WiFiManager &wifiManager)
 {
@@ -223,7 +231,7 @@ void ConfigManager_::startConfigPortal()
 
     Serial.print("startConfigPortal");
     wifiManager.startConfigPortal(WIFI_MANAGER_SSID); // trigger config portal
-    
+    Serial.print("back from startConfigPortal");
     shouldSaveConfig = true;//aparently the callback does not work as expected
     saveConfig();
     
